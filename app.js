@@ -80,6 +80,18 @@ app.get('/users/:id', (req, res) => {
 
 });
 
+//Retrieve user by name 
+app.get('/users/name/:name', (req, res) => {
+    const userName = req.params.name.toLocaleLowerCase();
+    const user = users.find(un => un.name.toLocaleLowerCase() === userName);
+    if (!user) return res.status(404).send('User not found');
+
+    user.posts = posts.filter(p => p.userId === user.id);
+
+    res.send(user);
+
+});
+
 //Update user info
 app.put('/users/:id', (req, res) => {
     const user = users.find(u => u.id === parseInt(req.params.id));
@@ -96,7 +108,9 @@ app.delete('/users/:id', (req, res) => {
     const userIndex = parseInt(req.params.id - 1);
     users.splice(userIndex, 1);
 
-    res.send('User deleted');
+    posts = posts.filter(p => p.userId !== users[userIndex].id);
+
+    res.status(204).send('User deleted');
 });
 
 //Show posts
@@ -134,7 +148,7 @@ app.get('/posts/:id', (req, res) => {
 app.put('/posts/:id', (req, res) => {
     const post = posts.find(p => p.id === parseInt(req.params.id));
     
-    if (!post) return res.status(404).send('post not found');
+    if (!post) return res.status(404).send('Post not found');
 
     post.title = req.body.title;
     post.content = req.body.content;
@@ -147,8 +161,10 @@ app.delete('/posts/:id', (req, res) => {
     const postIndex = parseInt(req.params.id - 1);
     posts.splice(postIndex, 1);
 
-    res.send('Post deleted');
+    res.status(204).send('Post deleted');
 });
+
+
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
