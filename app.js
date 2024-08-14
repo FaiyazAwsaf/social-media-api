@@ -45,6 +45,12 @@ let posts =
     }
 ];
 
+users.forEach(attachPostsToUser);
+
+function attachPostsToUser(user){
+    user.posts = posts.filter(p => p.userId === user.id);
+};
+
 //Home page
 app.get('/', (req, res) => {
     res.send('Hello World!');
@@ -105,11 +111,12 @@ app.put('/users/:id', (req, res) => {
 
 //Delete user 
 app.delete('/users/:id', (req, res) => {
-    const userIndex = parseInt(req.params.id - 1);
+    const user = users.find(u => u.id === parseInt(req.params.id));
+
+    posts = posts.filter(p => p.userId !== user.id);
+
+    const userIndex = users.indexOf(user);
     users.splice(userIndex, 1);
-
-    posts = posts.filter(p => p.userId !== users[userIndex].id);
-
     res.status(204).send('User deleted');
 });
 
@@ -130,6 +137,8 @@ app.post('/posts', (req, res) => {
         title: req.body.title,
         content: req.body.content
     };
+
+    user.posts.push(newPost);
     posts.push(newPost);
     res.status(201).send(newPost);
 });
