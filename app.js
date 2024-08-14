@@ -72,8 +72,10 @@ app.post('/users', (req, res) => {
 app.get('/users/:id', (req, res) => {
     const userID = parseInt(req.params.id);
     const user = users.find(u => u.id === userID);
-
     if (!user) return res.status(404).send('User not found');
+
+    user.posts = posts.filter(p => p.userId === user.id);
+
     res.send(user);
 
 });
@@ -85,6 +87,7 @@ app.put('/users/:id', (req, res) => {
 
     user.name = req.body.name;
     user.email = req.body.email;
+    
     res.send(user);
 });
 
@@ -117,10 +120,34 @@ app.post('/posts', (req, res) => {
     res.status(201).send(newPost);
 });
 
+//Retrieve post by ID
 app.get('/posts/:id', (req, res) => {
-    const post = posts.find(p => p.id === parseInt(req.params.id));
+    const postID =  parseInt(req.params.id);
+    const post = posts.find(p => p.id === postID);
+  
     if (!post) return res.status(404).send('Post not found');
+    
     res.send(post);
+});
+
+//Update post info
+app.put('/posts/:id', (req, res) => {
+    const post = posts.find(p => p.id === parseInt(req.params.id));
+    
+    if (!post) return res.status(404).send('post not found');
+
+    post.title = req.body.title;
+    post.content = req.body.content;
+    
+    res.send(post);
+});
+
+//Delete post
+app.delete('/posts/:id', (req, res) => {
+    const postIndex = parseInt(req.params.id - 1);
+    posts.splice(postIndex, 1);
+
+    res.send('Post deleted');
 });
 
 app.listen(port, () => {
