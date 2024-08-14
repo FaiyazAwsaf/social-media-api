@@ -6,6 +6,7 @@
 - **GET /users**: Retrieve a list of all users.
 - **POST /users**: Create a new user.
 - **GET /users/:id**: Retrieve a specific user by ID.
+- **GET /users/name/:name**: Retrieve a specific user by name.
 - **PUT /users/:id**: Update details of a specific user by ID.
 - **DELETE /users/:id**: Delete a specific user by ID.
 
