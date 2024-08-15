@@ -58,7 +58,15 @@ app.get('/', (req, res) => {
 
 //Users list
 app.get('/users', (req, res) => {
-    res.send(users);
+    const limit = parseInt(req.query.limit)
+    
+    if(!isNaN(limit) && limit > 0){
+        res.send(users.slice(0, limit));    
+    } 
+    else {
+        res.send(users);
+    }
+    
 });
 
 //Create new user
@@ -122,7 +130,14 @@ app.delete('/users/:id', (req, res) => {
 
 //Show posts
 app.get('/posts', (req, res) => {
-    res.send(posts);
+    const limit = parseInt(req.query.limit)
+    
+    if(!isNaN(limit) && limit > 0){
+        res.send(posts.slice(0, limit));    
+    } 
+    else {
+        res.send(posts);
+    }
 });
 
 //Create post (associated with a user)
