@@ -3,6 +3,8 @@ const app = express();
 const port = 3000;
 
 app.use(express.json());
+app.use(logger);
+
 
 let users =
 [
@@ -45,11 +47,15 @@ let posts =
     }
 ];
 
+let logs = [];
+
 users.forEach(attachPostsToUser);
 
 function attachPostsToUser(user){
     user.posts = posts.filter(p => p.userId === user.id);
 };
+
+
 
 //Home page
 app.get('/', (req, res) => {
@@ -65,18 +71,42 @@ app.get('/users', (req, res) => {
     } 
     else {
         res.send(users); 
-        
     }
+
+    console.log(users);
     
 });
 
 //Create new user
 app.post('/users', (req, res) => {
-    const newUser = {
-        id : users.length + 1,
-        name : req.body.name,
-        email : req.body.email
+    
+    const { name, email } = req.body;
+
+    if (!name || !email) {
+        return res.status(400).json({ error: 'Name and email are required' });
     }
+    const newUser = {
+         id: users.length + 1, 
+         name, 
+         email 
+    };
+    
+    // Alternative 1
+    // const name = req.body.name;
+    // const email = req.body.email;
+     
+    // const newUser = {
+    //     id : users.length + 1,
+    //     name,
+    //     email    
+    // }
+
+    // Alternative 2
+    // const newUser = {
+    //     id : users.length + 1,
+    //     name : req.body.name,
+    //     email : req.body.email
+    // }
 
     users.push(newUser);
     // res.send(newUser);
@@ -134,10 +164,10 @@ app.get('/posts', (req, res) => {
     const limit = parseInt(req.query.limit)
     
     if(!isNaN(limit) && limit > 0){
-        res.send(posts.slice(0, limit));    
+        res.status(200).send(posts.slice(0, limit));    
     } 
     else {
-        res.send(posts);
+        res.status(200).send(posts);
     }
 });
 
@@ -188,6 +218,26 @@ app.delete('/posts/:id', (req, res) => {
 
     res.status(204).send('Post deleted');
 });
+
+
+
+
+function logger(req, res, next) {
+
+    const newLog = {
+        method: req.method,
+        url: req.originalUrl 
+    }
+
+    logs.push(newLog);
+    console.log("Logged: ", newLog);
+    console.log("ALL logs", logs);
+    next();
+}
+
+function apiAuth(req, res, next) {
+    apiKey = req.header[]
+}
 
 
 
