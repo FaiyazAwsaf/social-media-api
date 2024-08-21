@@ -4,6 +4,8 @@ const port = 3000;
 
 app.use(express.json());
 app.use(logger);
+app.use(apiAuth);
+
 
 
 let users =
@@ -66,15 +68,12 @@ app.get('/', (req, res) => {
 app.get('/users', (req, res) => {
     const limit = parseInt(req.query.limit)
     
-    if(!isNaN(limit) && limit > 0){
+    if(!isNaN(liit) && limit > 0){
         res.send(users.slice(0, limit));    
     } 
     else {
         res.send(users); 
-    }
-
-    console.log(users);
-    
+    }    
 });
 
 //Create new user
@@ -236,7 +235,11 @@ function logger(req, res, next) {
 }
 
 function apiAuth(req, res, next) {
-    apiKey = req.header[]
+    apiKey = req.headers['x-api-key'];
+    if (!apiKey || apiKey !== 'aa-bb-cc-dd') {
+        return res.status(403).send('Invalid api key');
+    }
+    next();
 }
 
 
