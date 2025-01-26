@@ -54,7 +54,7 @@ let logs = [];
 users.forEach(attachPostsToUser);
 
 function attachPostsToUser(user){
-    user.posts = posts.filter(p => p.userId === user.id);
+    user.posts = posts.filter(p => p.userId === user.id); 
 };
 
 
@@ -68,7 +68,7 @@ app.get('/', (req, res) => {
 app.get('/users', (req, res) => {
     const limit = parseInt(req.query.limit)
     
-    if(!isNaN(liit) && limit > 0){
+    if(!isNaN(limit) && limit > 0){
         res.send(users.slice(0, limit));    
     } 
     else {
@@ -77,7 +77,7 @@ app.get('/users', (req, res) => {
 });
 
 //Create new user
-app.post('/users', (req, res) => {
+app.post('/users', checkInput, (req, res) => {
     
     const { name, email } = req.body;
 
@@ -171,7 +171,7 @@ app.get('/posts', (req, res) => {
 });
 
 //Create post (associated with a user)
-app.post('/posts', (req, res) => {
+app.post('/posts', checkInput, (req, res) => {
     const userId = req.body.userId;
     const user = users.find(u => u.id === userId);
     if (!user) return res.status(404).send('User not found');
@@ -239,6 +239,16 @@ function apiAuth(req, res, next) {
     if (!apiKey || apiKey !== 'aa-bb-cc-dd') {
         return res.status(403).send('Invalid api key');
     }
+    next();
+}
+
+function checkInput(req, res, next) {
+    const { name, email } = req.body;
+
+    if (name == null || email == null || title.trim() === "" || author.trim() === "") {
+        console.log("Invalid input!");
+    }
+
     next();
 }
 
