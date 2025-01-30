@@ -1,5 +1,6 @@
 const express = require('express');
 const app = express();
+const { check, validationResult } = require('express-validator');
 const port = 3000;
 
 app.use(express.json());
@@ -56,7 +57,31 @@ users.forEach(attachPostsToUser);
 function attachPostsToUser(user){
     user.posts = posts.filter(p => p.userId === user.id); 
 };
+const validateUser = [
+    check('name').notEmpty().withMessage('Name is required').escape(),
+    check('email').isEmail().withMessage('Invalid email format')
+        .notEmpty().withMessage('Email is required').escape(),
+    (req, res, next) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+        next();
+    }
+];
 
+const validaePost = [
+    check('title').notEmpty().withMessage("Enter a title!").escape(),
+    check('content').notEmpty().withMessage("The post has no contect!").escape(),
+
+    (req, res, next) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+        next();
+    }
+]; 
 
 
 //Home page
@@ -77,7 +102,7 @@ app.get('/users', (req, res) => {
 });
 
 //Create new user
-app.post('/users', checkInput, (req, res) => {
+app.post('/users',validateUser, (req, res) => {
     
     const { name, email } = req.body;
 
@@ -171,7 +196,7 @@ app.get('/posts', (req, res) => {
 });
 
 //Create post (associated with a user)
-app.post('/posts', checkInput, (req, res) => {
+app.post('/posts', validaePost, (req, res) => {
     const userId = req.body.userId;
     const user = users.find(u => u.id === userId);
     if (!user) return res.status(404).send('User not found');
@@ -221,6 +246,7 @@ app.delete('/posts/:id', (req, res) => {
 
 
 
+
 function logger(req, res, next) {
 
     const newLog = {
@@ -241,17 +267,6 @@ function apiAuth(req, res, next) {
     }
     next();
 }
-
-function checkInput(req, res, next) {
-    const { name, email } = req.body;
-
-    if (name == null || email == null || title.trim() === "" || author.trim() === "") {
-        console.log("Invalid input!");
-    }
-
-    next();
-}
-
 
 
 app.listen(port, () => {
