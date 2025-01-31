@@ -1,0 +1,27 @@
+-- Create database if it doesn't exist
+CREATE DATABASE IF NOT EXISTS social_media_db;
+USE social_media_db;
+
+-- Drop tables if they exist
+DROP TABLE IF EXISTS posts;
+DROP TABLE IF EXISTS users;
+
+-- Create users table
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Create posts table
+CREATE TABLE posts (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    userId INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+);

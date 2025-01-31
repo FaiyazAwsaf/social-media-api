@@ -1,62 +1,14 @@
 const express = require('express');
 const app = express();
 const { check, validationResult } = require('express-validator');
+const db = require('./db');
 const port = 3000;
 
 app.use(express.json());
 app.use(logger);
 app.use(apiAuth);
 
-
-
-let users =
-[
-    {
-        id: 1,
-        name: "John Doe",
-        email: "john.doe@example.com"
-    },
-    {
-        id: 2,
-        name: "Faiyaz Awsaf",
-        email: "faiyaz.@example.com"
-    },
-    {
-        id: 3,
-        name: "Zareen Tabassum",
-        email: "zareen.doe@example.com"
-    }
-];
-
-let posts =
-[
-    {
-        id: 1,
-        userId: 1,
-        title: "My First Post",
-        content: "This is the content of my first post."
-    },
-    {
-        id: 2,
-        userId: 1,
-        title: "My Second Post",
-        content: "This is the content of my first post."
-    },
-    {
-        id: 3,
-        userId: 1,
-        title: "My First Post",
-        content: "This is the content of my first post."
-    }
-];
-
-let logs = [];
-
-users.forEach(attachPostsToUser);
-
-function attachPostsToUser(user){
-    user.posts = posts.filter(p => p.userId === user.id); 
-};
+// Keep your existing validation middleware
 const validateUser = [
     check('name').notEmpty().withMessage('Name is required').escape(),
     check('email').isEmail().withMessage('Invalid email format')
@@ -70,10 +22,10 @@ const validateUser = [
     }
 ];
 
-const validaePost = [
+const validatePost = [
     check('title').notEmpty().withMessage("Enter a title!").escape(),
-    check('content').notEmpty().withMessage("The post has no contect!").escape(),
-
+    check('content').notEmpty().withMessage("The post has no content!").escape(),
+    check('userId').isInt().withMessage("User ID must be an integer"),
     (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -81,195 +33,284 @@ const validaePost = [
         }
         next();
     }
-]; 
+];
 
-
-//Home page
+// Updated routes with database operations
 app.get('/', (req, res) => {
     res.send('Hello World!');
 });
 
-//Users list
-app.get('/users', (req, res) => {
-    const limit = parseInt(req.query.limit)
-    
-    if(!isNaN(limit) && limit > 0){
-        res.send(users.slice(0, limit));    
-    } 
-    else {
-        res.send(users); 
-    }    
-});
-
-//Create new user
-app.post('/users',validateUser, (req, res) => {
-    
-    const { name, email } = req.body;
-
-    if (!name || !email) {
-        return res.status(400).json({ error: 'Name and email are required' });
-    }
-    const newUser = {
-         id: users.length + 1, 
-         name, 
-         email 
-    };
-    
-    // Alternative 1
-    // const name = req.body.name;
-    // const email = req.body.email;
-     
-    // const newUser = {
-    //     id : users.length + 1,
-    //     name,
-    //     email    
-    // }
-
-    // Alternative 2
-    // const newUser = {
-    //     id : users.length + 1,
-    //     name : req.body.name,
-    //     email : req.body.email
-    // }
-
-    users.push(newUser);
-    // res.send(newUser);
-    res.status(201).send(newUser);
-});
-
-//Retrieve user by ID 
-app.get('/users/:id', (req, res) => {
-    const userID = parseInt(req.params.id);
-    const user = users.find(u => u.id === userID);
-    if (!user) return res.status(404).send('User not found');
-
-    user.posts = posts.filter(p => p.userId === user.id);
-
-    res.send(user);
-
-});
-
-//Retrieve user by name 
-app.get('/users/name/:name', (req, res) => {
-    const userName = req.params.name.toLocaleLowerCase();
-    const user = users.find(un => un.name.toLocaleLowerCase() === userName);
-    if (!user) return res.status(404).send('User not found');
-
-    user.posts = posts.filter(p => p.userId === user.id);
-
-    res.send(user);
-
-});
-
-//Update user info
-app.put('/users/:id', (req, res) => {
-    const user = users.find(u => u.id === parseInt(req.params.id));
-    if (!user) return res.status(404).send('User not found');
-
-    user.name = req.body.name;
-    user.email = req.body.email;
-    
-    res.send(user);
-});
-
-//Delete user 
-app.delete('/users/:id', (req, res) => {
-    const user = users.find(u => u.id === parseInt(req.params.id));
-
-    posts = posts.filter(p => p.userId !== user.id);
-
-    const userIndex = users.indexOf(user);
-    users.splice(userIndex, 1);
-    res.status(204).send('User deleted');
-});
-
-//Show posts
-app.get('/posts', (req, res) => {
-    const limit = parseInt(req.query.limit)
-    
-    if(!isNaN(limit) && limit > 0){
-        res.status(200).send(posts.slice(0, limit));    
-    } 
-    else {
-        res.status(200).send(posts);
+// Get users (you already have this one)
+app.get('/users', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit);
+        let query = 'SELECT * FROM users';
+        if (!isNaN(limit) && limit > 0) {
+            query += ' LIMIT ?';
+            const [users] = await db.execute(query, [limit]);
+            res.send(users);
+        } else {
+            const [users] = await db.query(query);
+            res.send(users);
+        }
+    } catch (error) {
+        res.status(500).send('Database error: ' + error.message);
     }
 });
 
-//Create post (associated with a user)
-app.post('/posts', validaePost, (req, res) => {
-    const userId = req.body.userId;
-    const user = users.find(u => u.id === userId);
-    if (!user) return res.status(404).send('User not found');
-
-    const newPost = {
-        id: posts.length + 1,
-        userId: userId,
-        title: req.body.title,
-        content: req.body.content
-    };
-
-    user.posts.push(newPost);
-    posts.push(newPost);
-    res.status(201).send(newPost);
-});
-
-//Retrieve post by ID
-app.get('/posts/:id', (req, res) => {
-    const postID =  parseInt(req.params.id);
-    const post = posts.find(p => p.id === postID);
-  
-    if (!post) return res.status(404).send('Post not found');
-    
-    res.send(post);
-});
-
-//Update post info
-app.put('/posts/:id', (req, res) => {
-    const post = posts.find(p => p.id === parseInt(req.params.id));
-    
-    if (!post) return res.status(404).send('Post not found');
-
-    post.title = req.body.title;
-    post.content = req.body.content;
-    
-    res.send(post);
-});
-
-//Delete post
-app.delete('/posts/:id', (req, res) => {
-    const postIndex = parseInt(req.params.id - 1);
-    posts.splice(postIndex, 1);
-
-    res.status(204).send('Post deleted');
-});
-
-
-
-
-
-function logger(req, res, next) {
-
-    const newLog = {
-        method: req.method,
-        url: req.originalUrl 
+// Create new user
+app.post('/users', validateUser, async (req, res) => {
+    try {
+        const { name, email } = req.body;
+        const [result] = await db.execute(
+            'INSERT INTO users (name, email) VALUES (?, ?)',
+            [name, email]
+        );
+        
+        const [newUser] = await db.execute(
+            'SELECT * FROM users WHERE id = ?',
+            [result.insertId]
+        );
+        
+        res.status(201).send(newUser[0]);
+    } catch (error) {
+        res.status(500).send('Database error: ' + error.message);
     }
+});
 
-    logs.push(newLog);
-    console.log("Logged: ", newLog);
-    console.log("ALL logs", logs);
-    next();
+// Get user by ID with their posts
+app.get('/users/:id', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        const [users] = await db.execute(
+            'SELECT * FROM users WHERE id = ?',
+            [userId]
+        );
+        
+        if (users.length === 0) {
+            return res.status(404).send('User not found');
+        }
+
+        const [posts] = await db.execute(
+            'SELECT * FROM posts WHERE userId = ?',
+            [userId]
+        );
+
+        const user = users[0];
+        user.posts = posts;
+        res.send(user);
+    } catch (error) {
+        res.status(500).send('Database error: ' + error.message);
+    }
+});
+
+// Get user by name
+app.get('/users/name/:name', async (req, res) => {
+    try {
+        const userName = req.params.name.toLowerCase();
+        const [users] = await db.execute(
+            'SELECT * FROM users WHERE LOWER(name) = ?',
+            [userName]
+        );
+
+        if (users.length === 0) {
+            return res.status(404).send('User not found');
+        }
+
+        const [posts] = await db.execute(
+            'SELECT * FROM posts WHERE userId = ?',
+            [users[0].id]
+        );
+
+        const user = users[0];
+        user.posts = posts;
+        res.send(user);
+    } catch (error) {
+        res.status(500).send('Database error: ' + error.message);
+    }
+});
+
+// Update user
+app.put('/users/:id', validateUser, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        const { name, email } = req.body;
+        
+        const [result] = await db.execute(
+            'UPDATE users SET name = ?, email = ? WHERE id = ?',
+            [name, email, userId]
+        );
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).send('User not found');
+        }
+        
+        const [updatedUser] = await db.execute(
+            'SELECT * FROM users WHERE id = ?',
+            [userId]
+        );
+        
+        res.send(updatedUser[0]);
+    } catch (error) {
+        res.status(500).send('Database error: ' + error.message);
+    }
+});
+
+// Delete user
+app.delete('/users/:id', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        const [result] = await db.execute(
+            'DELETE FROM users WHERE id = ?',
+            [userId]
+        );
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).send('User not found');
+        }
+        
+        res.status(204).send();
+    } catch (error) {
+        res.status(500).send('Database error: ' + error.message);
+    }
+});
+
+// Get posts
+app.get('/posts', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit);
+        let query = 'SELECT * FROM posts';
+        if (!isNaN(limit) && limit > 0) {
+            query += ' LIMIT ?';
+            const [posts] = await db.execute(query, [limit]);
+            res.send(posts);
+        } else {
+            const [posts] = await db.query(query);
+            res.send(posts);
+        }
+    } catch (error) {
+        res.status(500).send('Database error: ' + error.message);
+    }
+});
+
+// Create post
+app.post('/posts', validatePost, async (req, res) => {
+    try {
+        const { userId, title, content } = req.body;
+        
+        // Check if user exists
+        const [users] = await db.execute(
+            'SELECT id FROM users WHERE id = ?',
+            [userId]
+        );
+        
+        if (users.length === 0) {
+            return res.status(404).send('User not found');
+        }
+        
+        const [result] = await db.execute(
+            'INSERT INTO posts (userId, title, content) VALUES (?, ?, ?)',
+            [userId, title, content]
+        );
+        
+        const [newPost] = await db.execute(
+            'SELECT * FROM posts WHERE id = ?',
+            [result.insertId]
+        );
+        
+        res.status(201).send(newPost[0]);
+    } catch (error) {
+        res.status(500).send('Database error: ' + error.message);
+    }
+});
+
+// Get post by ID
+app.get('/posts/:id', async (req, res) => {
+    try {
+        const postId = parseInt(req.params.id);
+        const [posts] = await db.execute(
+            'SELECT * FROM posts WHERE id = ?',
+            [postId]
+        );
+        
+        if (posts.length === 0) {
+            return res.status(404).send('Post not found');
+        }
+        
+        res.send(posts[0]);
+    } catch (error) {
+        res.status(500).send('Database error: ' + error.message);
+    }
+});
+
+// Update post
+app.put('/posts/:id', validatePost, async (req, res) => {
+    try {
+        const postId = parseInt(req.params.id);
+        const { title, content } = req.body;
+        
+        const [result] = await db.execute(
+            'UPDATE posts SET title = ?, content = ? WHERE id = ?',
+            [title, content, postId]
+        );
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).send('Post not found');
+        }
+        
+        const [updatedPost] = await db.execute(
+            'SELECT * FROM posts WHERE id = ?',
+            [postId]
+        );
+        
+        res.send(updatedPost[0]);
+    } catch (error) {
+        res.status(500).send('Database error: ' + error.message);
+    }
+});
+
+// Delete post
+app.delete('/posts/:id', async (req, res) => {
+    try {
+        const postId = parseInt(req.params.id);
+        const [result] = await db.execute(
+            'DELETE FROM posts WHERE id = ?',
+            [postId]
+        );
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).send('Post not found');
+        }
+        
+        res.status(204).send();
+    } catch (error) {
+        res.status(500).send('Database error: ' + error.message);
+    }
+});
+
+// Update logger to use database
+async function logger(req, res, next) {
+    try {
+        await db.execute(
+            'INSERT INTO logs (method, url) VALUES (?, ?)',
+            [req.method, req.originalUrl]
+        );
+        console.log("Logged:", { method: req.method, url: req.originalUrl });
+        next();
+    } catch (error) {
+        console.error('Logging error:', error);
+        next(); // Continue even if logging fails
+    }
 }
 
 function apiAuth(req, res, next) {
-    apiKey = req.headers['x-api-key'];
+    const apiKey = req.headers['x-api-key'];
     if (!apiKey || apiKey !== 'aa-bb-cc-dd') {
         return res.status(403).send('Invalid api key');
     }
     next();
 }
 
-
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
-
